@@ -163,6 +163,15 @@ func (db *Database) InsertVersion(version *state.Version) error {
 	return nil
 }
 
+// InsertPlan inserts a Terraform plan with associated information in the Database
+func (db *Database) InsertPlan(plan []byte) error {
+	var p types.Plan
+	if err := json.Unmarshal(plan, &p); err != nil {
+		return err
+	}
+	return db.Create(&p).Error
+}
+
 // GetState retrieves a State from the database by its path and versionID
 func (db *Database) GetState(path, versionID string) (state types.State) {
 	db.Joins("JOIN versions on states.version_id=versions.id").
