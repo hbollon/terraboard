@@ -72,7 +72,7 @@
                 </li>
                 <li class="list-group-item no-border-item">
                   Serial: {{ compare.stats.to.serial }}
-                </li>
+                </li> -->
               </ul>
             </li>
           </ul>
