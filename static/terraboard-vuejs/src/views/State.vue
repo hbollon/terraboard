@@ -203,6 +203,7 @@ import StatePlan from "../components/StatePlan.vue";
       url: {
         lineage: "",
         versionid: "",
+        planid: "",
         compare: "",
       },
       display: {
@@ -282,6 +283,16 @@ import StatePlan from "../components/StatePlan.vue";
         .get(url)
         .then((response) => {
           this.plans = response.data.plans;
+          if (router.currentRoute.value.query.planid !== undefined) {
+            this.url.planid = router.currentRoute.value.query.planid;
+            console.log(this.plans)
+            this.plans.forEach((plan: any) => {
+              console.log(plan.ID, this.url.planid)
+              if (plan.ID == this.url.planid) {
+              this.setPlanSelected(plan); 
+              }
+            });
+          }
         })
         .catch(function(err) {
           if (err.response) {
@@ -350,10 +361,14 @@ import StatePlan from "../components/StatePlan.vue";
     setPlanSelected(plan: any): void {
       this.selectedPlan = plan;
       this.state.outputs = false;
-      this.display.details = true;
-      this.display.outputs = false;
-      this.display.compare = false;
-      this.display.plan = true;
+      this.showPlanPanel();
+      router.replace({
+        path: `/lineage/${this.url.lineage}`,
+        query: { 
+          versionid: this.url.versionid,
+          planid: plan.ID 
+        },
+      });
     },
     setOutputs(mod: any): void {
       this.selectedMod = mod;
@@ -518,10 +533,11 @@ import StatePlan from "../components/StatePlan.vue";
     this.selectedVersion = this.url.versionid;
     this.compareVersion = router.currentRoute.value.query.compare;
     this.fetchLocks();
-    this.fetchLatestPlans(10);
     this.getVersions();
     this.getDetails(router.currentRoute.value.query.versionid);
     this.display.mod = this.selectedMod;
+
+    this.fetchLatestPlans(10);
   },
   updated() {
     hljs.highlightAll();
