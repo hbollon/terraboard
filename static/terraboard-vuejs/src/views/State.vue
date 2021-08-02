@@ -125,6 +125,20 @@
             </li>
           </ul>
         </div>
+        <div id="nodes" class="card mt-4" v-if="display.details || display.plan">
+          <h5 class="card-header">Plans</h5>
+              <ul id="nodeslist" class="list-group m-3">
+                <li
+                  v-for="plan in plans"
+                  v-bind:key="plan"
+                  v-bind:class="{ selected: plan == selectedPlan && display.plan }"
+                  @click="setPlanSelected(plan)"
+                  class="list-group-item plan"
+                >
+                  {{ this.formatDate(plan.CreatedAt) }}
+                </li>
+              </ul>
+        </div>
       </div>
     </div>
     <div id="node" class="col-xl-8 col-xxl-9">
@@ -132,17 +146,21 @@
         <h1>{{ state.path }}</h1>
       </div>
       <StateDetails
-        v-if="display.details && !display.outputs && !display.compare"
+        v-if="display.details && !display.outputs && !display.compare && !display.plan"
         v-bind:resource="selectedRes"
       />
       <StateOutputs
-        v-if="display.details && display.outputs"
+        v-if="display.details && display.outputs && !display.plan"
         v-bind:module="selectedMod"
       />
       <StatesCompare
-        v-if="!display.details && display.compare"
+        v-if="!display.details && display.compare && !display.plan"
         v-bind:compare="compare"
         v-bind:compareDiff="compareDiff"
+      />
+      <StatePlan
+        v-if="display.details && display.plan"
+        v-bind:plan="selectedPlan"
       />
     </div>
   </div>
@@ -157,6 +175,7 @@ import hljs from "highlight.js";
 import StateDetails from "../components/StateDetails.vue";
 import StateOutputs from "../components/StateOutputs.vue";
 import StatesCompare from "../components/StatesCompare.vue";
+import StatePlan from "../components/StatePlan.vue";
 
 @Options({
   title: "States",
@@ -164,6 +183,7 @@ import StatesCompare from "../components/StatesCompare.vue";
     StateDetails,
     StateOutputs,
     StatesCompare,
+    StatePlan,
   },
   emits: ["refresh"],
   data() {
@@ -190,12 +210,14 @@ import StatesCompare from "../components/StatesCompare.vue";
         compare: false,
         outputs: false,
         mod: {},
+        plan: false,
       },
       state: {
         details: {},
         path: {},
         outputs: false,
       },
+      plans: [],
     };
   },
   methods: {
@@ -240,6 +262,26 @@ import StatesCompare from "../components/StatesCompare.vue";
         .get(url)
         .then((response) => {
           this.locks = response.data;
+        })
+        .catch(function(err) {
+          if (err.response) {
+            console.log("Server Error:", err);
+          } else if (err.request) {
+            console.log("Network Error:", err);
+          } else {
+            console.log("Client Error:", err);
+          }
+        })
+        .then(function() {
+          // always executed
+        });
+    },
+    fetchLatestPlans(limit: number): void {
+      const url = `http://localhost:8080/api/plans?limit=`+limit+`&lineage=`+this.url.lineage;
+      axios
+        .get(url)
+        .then((response) => {
+          this.plans = response.data.plans;
         })
         .catch(function(err) {
           if (err.response) {
@@ -304,6 +346,14 @@ import StatesCompare from "../components/StatesCompare.vue";
         query: { versionid: this.url.versionid, ressource: hash },
 
       });
+    },
+    setPlanSelected(plan: any): void {
+      this.selectedPlan = plan;
+      this.state.outputs = false;
+      this.display.details = true;
+      this.display.outputs = false;
+      this.display.compare = false;
+      this.display.plan = true;
     },
     setOutputs(mod: any): void {
       this.selectedMod = mod;
@@ -468,6 +518,7 @@ import StatesCompare from "../components/StatesCompare.vue";
     this.selectedVersion = this.url.versionid;
     this.compareVersion = router.currentRoute.value.query.compare;
     this.fetchLocks();
+    this.fetchLatestPlans(10);
     this.getVersions();
     this.getDetails(router.currentRoute.value.query.versionid);
     this.display.mod = this.selectedMod;
