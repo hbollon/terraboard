@@ -161,6 +161,7 @@
       <StatePlan
         v-if="display.details && display.plan"
         v-bind:plan="selectedPlan"
+        v-bind:key="selectedPlan"
       />
     </div>
   </div>
@@ -283,13 +284,13 @@ import StatePlan from "../components/StatePlan.vue";
         .get(url)
         .then((response) => {
           this.plans = response.data.plans;
+          console.log(this.plans)
           if (router.currentRoute.value.query.planid !== undefined) {
             this.url.planid = router.currentRoute.value.query.planid;
-            console.log(this.plans)
             this.plans.forEach((plan: any) => {
               console.log(plan.ID, this.url.planid)
               if (plan.ID == this.url.planid) {
-              this.setPlanSelected(plan); 
+                this.setPlanSelected(plan); 
               }
             });
           }
