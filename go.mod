@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	cloud.google.com/go/storage v1.12.0
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/agext/levenshtein v1.2.3
 	github.com/apparentlymart/go-dump v0.0.0-20190214190832-042adf3cf4a0
 	github.com/apparentlymart/go-versions v1.0.1
@@ -35,6 +36,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/afero v1.2.2
+	github.com/stretchr/testify v1.7.0 // indirect
+	github.com/svanharmelen/jsonapi v0.0.0-20180618144545-0c0828c3f16d // indirect
 	github.com/zclconf/go-cty v1.9.0
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	golang.org/x/mod v0.4.2
