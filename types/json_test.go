@@ -3,6 +3,8 @@ package types
 import (
 	"encoding/json"
 	"reflect"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -75,6 +77,14 @@ func TestPlanOutputList(t *testing.T) {
 			if err := json.Unmarshal([]byte(tt.args), &got); err != nil {
 				t.Errorf("Failed to unmarshal json: %s", err)
 			}
+			sort.Slice(got, func(i, j int) bool {
+				cmpResult := strings.Compare(got[i].Name, got[j].Name)
+				return cmpResult == -1
+			})
+			sort.Slice(tt.want, func(i, j int) bool {
+				cmpResult := strings.Compare(tt.want[i].Name, tt.want[j].Name)
+				return cmpResult == -1
+			})
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf(
 					"TestPlanOutputList() -> \n\ngot:\n%v,\n\nwant:\n%v",
@@ -129,6 +139,14 @@ func TestPlanStateOutputList(t *testing.T) {
 			if err := json.Unmarshal([]byte(tt.args), &got); err != nil {
 				t.Errorf("Failed to unmarshal json: %s", err)
 			}
+			sort.Slice(got, func(i, j int) bool {
+				cmpResult := strings.Compare(got[i].Name, got[j].Name)
+				return cmpResult == -1
+			})
+			sort.Slice(tt.want, func(i, j int) bool {
+				cmpResult := strings.Compare(tt.want[i].Name, tt.want[j].Name)
+				return cmpResult == -1
+			})
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf(
 					"TestPlanStateOutputList() -> \n\ngot:\n%v,\n\nwant:\n%v",
@@ -191,6 +209,14 @@ func TestPlanStateResourceAttributeList(t *testing.T) {
 			if err := json.Unmarshal([]byte(tt.args), &got); err != nil {
 				t.Errorf("Failed to unmarshal json: %s", err)
 			}
+			sort.Slice(got, func(i, j int) bool {
+				cmpResult := strings.Compare(got[i].Key, got[j].Key)
+				return cmpResult == -1
+			})
+			sort.Slice(tt.want, func(i, j int) bool {
+				cmpResult := strings.Compare(tt.want[i].Key, tt.want[j].Key)
+				return cmpResult == -1
+			})
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf(
 					"TestPlanStateResourceAttributeList() -> \n\ngot:\n%v,\n\nwant:\n%v",
