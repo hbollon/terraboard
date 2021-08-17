@@ -351,30 +351,30 @@ func (db *Database) SearchAttribute(query url.Values) (results []types.SearchRes
 
 	if v := string(query.Get("type")); v != "" {
 		where = append(where, "resources.type LIKE ?")
-		params = append(params, fmt.Sprintf("%%%s%%", v))
+		params = append(params, fmt.Sprintf("%s", v))
 	}
 
 	if v := string(query.Get("name")); v != "" {
 		where = append(where, "resources.name LIKE ?")
-		params = append(params, fmt.Sprintf("%%%s%%", v))
+		params = append(params, fmt.Sprintf("%s", v))
 	}
 
 	if v := string(query.Get("key")); v != "" {
 		where = append(where, "attributes.key LIKE ?")
-		params = append(params, fmt.Sprintf("%%%s%%", v))
+		params = append(params, fmt.Sprintf("%s", v))
 	}
 
 	if v := string(query.Get("value")); v != "" {
 		where = append(where, "attributes.value LIKE ?")
-		params = append(params, fmt.Sprintf("%%%s%%", v))
+		params = append(params, fmt.Sprintf("%s", v))
 	}
 
 	if v := query.Get("tf_version"); string(v) != "" {
-		where = append(where, fmt.Sprintf("states.tf_version LIKE '%s'", fmt.Sprintf("%%%s%%", v)))
+		where = append(where, fmt.Sprintf("states.tf_version LIKE '%s'", fmt.Sprintf("%s", v)))
 	}
 
 	if v := query.Get("lineage_value"); string(v) != "" {
-		where = append(where, fmt.Sprintf("lineages.value LIKE '%s'", fmt.Sprintf("%%%s%%", v)))
+		where = append(where, fmt.Sprintf("lineages.value LIKE '%s'", fmt.Sprintf("%s", v)))
 	}
 
 	if len(where) > 0 {
@@ -394,7 +394,6 @@ func (db *Database) SearchAttribute(query url.Values) (results []types.SearchRes
 		" ORDER BY states.path, states.serial, lineage_value, modules.path, resources.type, resources.name, resources.index, attributes.key" +
 		" LIMIT ?"
 
-	log.Info(sql)
 	params = append(params, pageSize)
 
 	if v := string(query.Get("page")); v != "" {

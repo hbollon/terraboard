@@ -1,6 +1,7 @@
 package db
 
 import (
+	"net/url"
 	"regexp"
 	"testing"
 	"time"
@@ -33,8 +34,7 @@ func TestInsertState(t *testing.T) {
 		 LIMIT 1`,
 	)).
 		WithArgs("foo").
-		WillReturnRows(sqlmock.NewRows([]string{"version_id"})).
-		WillReturnError(gorm.ErrRecordNotFound)
+		WillReturnRows(sqlmock.NewRows([]string{"version_id"}))
 
 	mock.ExpectQuery(regexp.QuoteMeta(
 		`SELECT * FROM "lineages" 
@@ -66,8 +66,8 @@ func TestInsertState(t *testing.T) {
 		Lineage:          "lineage",
 		State:            &states.State{},
 	})
-
 	assert.Nil(t, err)
+
 	err = mock.ExpectationsWereMet()
 	assert.Nil(t, err)
 }
@@ -82,65 +82,50 @@ func TestGetState(t *testing.T) {
 	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: fakeDB}))
 	assert.Nil(t, err)
 
-	// State insertion
-	mock.ExpectQuery(regexp.QuoteMeta(
-		`SELECT * FROM "versions"
-		 WHERE "versions"."version_id" = $1
-		 ORDER BY "versions"."id"
-		 LIMIT 1`,
-	)).
-		WithArgs("foo").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "version_id"}).AddRow(1, "foo"))
-
-	mock.ExpectQuery(regexp.QuoteMeta(
-		`SELECT * FROM "lineages" 
-		 WHERE "lineages"."value" = $1 AND "lineages"."deleted_at" IS NULL 
-		 ORDER BY "lineages"."id" 
-		 LIMIT 1`,
-	)).
-		WithArgs("lineage").
-		WillReturnRows(sqlmock.NewRows([]string{"id"}))
-
-	mock.ExpectBegin()
-	mock.ExpectQuery(`^INSERT INTO "lineages" (.+)`).
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), nil, "lineage").
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-	mock.ExpectCommit()
-
-	mock.ExpectBegin()
-	mock.ExpectQuery(`^INSERT INTO "versions" (.+)`).
-		WithArgs("foo", time.Time{}, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-	mock.ExpectQuery(`^INSERT INTO "states" (.+)`).
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), nil, "path", 1, "1.0.0", 2, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-	mock.ExpectCommit()
-
 	// State retrieval
-	mock.ExpectQuery("^SELECT (.+)").
+	mock.ExpectQuery(`^SELECT (.+) FROM "states" (.+)`).
 		WithArgs("lineage", "foo").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "path"}).AddRow(1, "path"))
-	mock.ExpectQuery("^SELECT (.+)").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "path"}).AddRow(1, `path`))
+	mock.ExpectQuery(`^SELECT (.+) FROM "modules" (.+)`).
 		WithArgs(1).
-		WillReturnRows(sqlmock.NewRows([]string{}))
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
 	db := &Database{
 		DB: gormDB,
 	}
 
-	tfVersion, err := version.NewSemver("v1.0.0")
-	err = db.InsertState("path", "foo", &statefile.File{
-		TerraformVersion: tfVersion,
-		Serial:           2,
-		Lineage:          "lineage",
-		State:            &states.State{},
-	})
-	assert.Nil(t, err)
-
 	state := db.GetState("lineage", "foo")
 	assert.NotNil(t, state)
 	assert.Equal(t, uint(1), state.ID)
 	assert.Equal(t, "path", state.Path)
+
+	err = mock.ExpectationsWereMet()
+	assert.Nil(t, err)
+}
+
+func TestGetLineageActivity(t *testing.T) {
+	fakeDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer fakeDB.Close()
+
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: fakeDB}))
+	assert.Nil(t, err)
+
+	// Lineage activity retrieval
+	mock.ExpectQuery("^SELECT (.+)").
+		WithArgs("lineage").
+		WillReturnRows(sqlmock.NewRows([]string{"path", "version_id"}).AddRow("path", "foo"))
+
+	db := &Database{
+		DB: gormDB,
+	}
+
+	states := db.GetLineageActivity("lineage")
+	assert.NotNil(t, states)
+	assert.Equal(t, "path", states[0].Path)
+	assert.Equal(t, "foo", states[0].VersionID)
 
 	err = mock.ExpectationsWereMet()
 	assert.Nil(t, err)
@@ -160,9 +145,14 @@ func TestInsertVersionCreated(t *testing.T) {
 		`SELECT * FROM "versions"
 		 WHERE "versions"."version_id" = $1
 		 ORDER BY "versions"."id"
-		 LIMIT 1`)).WithArgs("foo").WillReturnRows(sqlmock.NewRows([]string{"version_id"}))
+		 LIMIT 1`)).
+		WithArgs("foo").
+		WillReturnRows(sqlmock.NewRows([]string{"version_id"}))
+
 	mock.ExpectBegin()
-	mock.ExpectQuery("^INSERT (.+)").WithArgs("foo", time.Time{}).WillReturnRows(sqlmock.NewRows([]string{}))
+	mock.ExpectQuery("^INSERT (.+)").
+		WithArgs("foo", time.Time{}).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	mock.ExpectCommit()
 
 	db := &Database{
@@ -172,6 +162,93 @@ func TestInsertVersionCreated(t *testing.T) {
 		ID: "foo",
 	})
 	assert.Nil(t, err)
+	err = mock.ExpectationsWereMet()
+	assert.Nil(t, err)
+}
+
+func TestKnownVersions(t *testing.T) {
+	fakeDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer fakeDB.Close()
+
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: fakeDB}))
+	assert.Nil(t, err)
+
+	// Versions insertion
+	mock.ExpectQuery(regexp.QuoteMeta(
+		`SELECT * FROM "versions"
+		 WHERE "versions"."version_id" = $1
+		 ORDER BY "versions"."id"
+		 LIMIT 1`)).
+		WithArgs("foo").
+		WillReturnRows(sqlmock.NewRows([]string{"version_id"}))
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("^INSERT (.+)").
+		WithArgs("foo", time.Time{}).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+	mock.ExpectCommit()
+
+	// Known versions retrieval
+	mock.ExpectQuery("^SELECT (.+)").
+		WillReturnRows(sqlmock.NewRows([]string{"version_id"}).AddRow("foo"))
+
+	db := &Database{
+		DB: gormDB,
+	}
+	err = db.InsertVersion(&state.Version{
+		ID: "foo",
+	})
+	assert.Nil(t, err)
+
+	versions := db.KnownVersions()
+	assert.Equal(t, 1, len(versions))
+	assert.Equal(t, "foo", versions[0])
+
+	err = mock.ExpectationsWereMet()
+	assert.Nil(t, err)
+}
+
+func TestSearchAttribute(t *testing.T) {
+	fakeDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer fakeDB.Close()
+
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn: fakeDB,
+	}))
+	assert.Nil(t, err)
+
+	// Search attribute
+	mock.ExpectQuery("^SELECT count(.+)").
+		WillReturnRows(sqlmock.NewRows([]string{"total"}).AddRow(1))
+	mock.ExpectQuery("^SELECT (.+)").
+		WithArgs("test_thing", "baz", "woozles", `"confuzles"`, 20).
+		WillReturnRows(sqlmock.NewRows([]string{"path", "version_id", "tf_version"}).AddRow("path", "foo", "1.0.0"))
+
+	db := &Database{
+		DB: gormDB,
+	}
+
+	params := url.Values{}
+	params.Add("name", "baz")
+	params.Add("type", "test_thing")
+	params.Add("key", "woozles")
+	params.Add("value", `"confuzles"`)
+	params.Add("tf_version", "1.0.0")
+
+	results, page, total := db.SearchAttribute(params)
+	assert.Equal(t, 1, len(results))
+	assert.Equal(t, 1, page)
+	assert.Equal(t, 1, total)
+	assert.Equal(t, "path", results[0].Path)
+	assert.Equal(t, "1.0.0", results[0].TFVersion)
+	assert.Equal(t, "foo", results[0].VersionID)
+
 	err = mock.ExpectationsWereMet()
 	assert.Nil(t, err)
 }
