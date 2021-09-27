@@ -50,7 +50,7 @@ coverage: ## Generates coverage report
 
 .PHONY: publish-coveralls
 publish-coveralls: setup ## Publish coverage results on coveralls
-	goveralls -service=travis-ci -coverprofile=coverage.out
+	goveralls -service=github -coverprofile=coverage.out -ignore=internal/**/*
 
 .PHONY: clean
 clean: ## Remove binary if it exists
