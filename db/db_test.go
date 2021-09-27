@@ -2,6 +2,7 @@ package db
 
 import (
 	"net/url"
+	"reflect"
 	"regexp"
 	"testing"
 	"time"
@@ -12,10 +13,109 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
+	"github.com/camptocamp/terraboard/internal/terraform/addrs"
 	"github.com/camptocamp/terraboard/internal/terraform/states"
 	"github.com/camptocamp/terraboard/internal/terraform/states/statefile"
 	"github.com/camptocamp/terraboard/state"
+	"github.com/camptocamp/terraboard/types"
 )
+
+func TestGetResourceIndex(t *testing.T) {
+	tests := []struct {
+		name string
+		args addrs.InstanceKey
+		want string
+	}{
+		{
+			"StringKey",
+			addrs.StringKey("module.bar"),
+			"[\"module.bar\"]",
+		},
+		{
+			"NoKey",
+			addrs.NoKey,
+			"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getResourceIndex(tt.args)
+			if got != tt.want {
+				t.Errorf(
+					"TestGetResourceIndex() -> \n\ngot:\n%v,\n\nwant:\n%v",
+					got,
+					tt.want,
+				)
+			}
+		})
+	}
+}
+
+func TestMarshalAttributeValues(t *testing.T) {
+	tests := []struct {
+		name string
+		args *states.ResourceInstanceObjectSrc
+		want []types.Attribute
+	}{
+		{
+			"Nil src",
+			nil,
+			nil,
+		},
+		{
+			"Empty AttrsFlat",
+			&states.ResourceInstanceObjectSrc{
+				AttrsJSON: []byte(`{"ami":"bar"}`),
+				Status:    states.ObjectReady,
+			},
+			[]types.Attribute{
+				{
+					Key:   "ami",
+					Value: "\"bar\"",
+				},
+			},
+		},
+		{
+			"Empty AttrsFlat with bad AttrsJSON JSON format",
+			&states.ResourceInstanceObjectSrc{
+				AttrsJSON: []byte(`"bar"`),
+				Status:    states.ObjectReady,
+			},
+			nil,
+		},
+		{
+			"With valid AttrsFlat",
+			&states.ResourceInstanceObjectSrc{
+				AttrsJSON: []byte(`{"ami":"bar"}`),
+				AttrsFlat: map[string]string{
+					"ami": "bar",
+				},
+				Status: states.ObjectReady,
+			},
+			[]types.Attribute{
+				{
+					Key:   "ami",
+					Value: "\"bar\"",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := marshalAttributeValues(tt.args)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf(
+					"TestMarshalAttributeValues() -> \n\ngot:\n%v,\n\nwant:\n%v",
+					got,
+					tt.want,
+				)
+			}
+		})
+	}
+
+}
 
 func TestInsertState(t *testing.T) {
 	fakeDB, mock, err := sqlmock.New()
