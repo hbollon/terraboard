@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -166,6 +167,161 @@ func TestInsertState(t *testing.T) {
 		Lineage:          "lineage",
 		State:            &states.State{},
 	})
+	assert.Nil(t, err)
+
+	err = mock.ExpectationsWereMet()
+	assert.Nil(t, err)
+}
+
+func TestUpdateStateWithLineage(t *testing.T) {
+	testState := types.State{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Path:      "foo",
+		TFVersion: "bar",
+		Serial:    1,
+		VersionID: sql.NullInt64{Int64: 1, Valid: true},
+	}
+
+	fakeDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer fakeDB.Close()
+
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: fakeDB}))
+	assert.Nil(t, err)
+
+	mock.ExpectQuery(
+		"SELECT (.+)",
+	).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"lineage"}).AddRow("lineage_value"))
+
+	mock.ExpectQuery(
+		"SELECT (.+)").
+		WithArgs("lineage_value").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("^INSERT (.+)").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "lineage_value").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+	mock.ExpectCommit()
+
+	mock.ExpectBegin()
+	mock.ExpectExec("^UPDATE (.+)").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "foo", 1, "bar", 1, 1, 1).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	db := &Database{
+		DB: gormDB,
+	}
+
+	err = db.UpdateState(testState)
+	assert.Nil(t, err)
+
+	err = mock.ExpectationsWereMet()
+	assert.Nil(t, err)
+}
+
+func TestUpdateStateWithoutLineage(t *testing.T) {
+	testState := types.State{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Path:      "foo",
+		TFVersion: "bar",
+		Serial:    1,
+		VersionID: sql.NullInt64{Int64: 1, Valid: true},
+	}
+
+	fakeDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer fakeDB.Close()
+
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: fakeDB}))
+	assert.Nil(t, err)
+
+	mock.ExpectQuery(
+		"SELECT (.+)",
+	).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"lineage"}))
+
+	mock.ExpectQuery(
+		"SELECT (.+)").
+		WithArgs("foo").
+		WillReturnRows(sqlmock.NewRows([]string{"lineage"}).AddRow("lineage_value"))
+
+	mock.ExpectQuery(
+		"SELECT (.+)").
+		WithArgs("lineage_value").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("^INSERT (.+)").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "lineage_value").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+	mock.ExpectCommit()
+
+	mock.ExpectBegin()
+	mock.ExpectExec("^UPDATE (.+)").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "foo", 1, "bar", 1, 1, 1).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	db := &Database{
+		DB: gormDB,
+	}
+
+	err = db.UpdateState(testState)
+	assert.Nil(t, err)
+
+	err = mock.ExpectationsWereMet()
+	assert.Nil(t, err)
+}
+
+func TestUpdateStateFail(t *testing.T) {
+	testState := types.State{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Path:      "foo",
+		TFVersion: "bar",
+		Serial:    1,
+		VersionID: sql.NullInt64{Int64: 1, Valid: true},
+	}
+
+	fakeDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer fakeDB.Close()
+
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: fakeDB}))
+	assert.Nil(t, err)
+
+	mock.ExpectQuery(
+		"SELECT (.+)",
+	).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"lineage"}))
+
+	mock.ExpectQuery(
+		"SELECT (.+)").
+		WithArgs("foo").
+		WillReturnRows(sqlmock.NewRows([]string{"lineage"}).AddRow(""))
+
+	db := &Database{
+		DB: gormDB,
+	}
+
+	err = db.UpdateState(testState)
 	assert.Nil(t, err)
 
 	err = mock.ExpectationsWereMet()
