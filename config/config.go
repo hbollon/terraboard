@@ -153,7 +153,7 @@ func initDefaultConfig() Config {
 // Parse flags and env variables to given struct using go-flags
 // parser
 func parseStructFlagsAndEnv(obj interface{}) {
-	parser := flags.NewParser(obj, flags.Default)
+	parser := flags.NewParser(obj, flags.IgnoreUnknown)
 	if _, err := parser.Parse(); err != nil {
 		fmt.Printf("Failed to parse flags: %s", err)
 		os.Exit(1)
