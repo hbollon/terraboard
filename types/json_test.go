@@ -158,6 +158,64 @@ func TestPlanStateOutputList(t *testing.T) {
 	}
 }
 
+func TestPlanVariableList(t *testing.T) {
+	jsonPlanVariableList := `{
+		"s3_bucket_arn": {
+			"value": "arn:aws:s3:::terraform-learning-bucket-hbollon"
+		},
+		"dynamodb_table_name": {
+			"value": "terraform-state-locks"
+		}
+	}`
+
+	objPlanVariableList := planVariableList{
+		{
+			Key:   "s3_bucket_arn",
+			Value: "map[value:arn:aws:s3:::terraform-learning-bucket-hbollon]",
+		},
+		{
+			Key:   "dynamodb_table_name",
+			Value: "map[value:terraform-state-locks]",
+		},
+	}
+
+	tests := []struct {
+		name string
+		args string
+		want planVariableList
+	}{
+		{
+			"planVariableList unmarshal",
+			jsonPlanVariableList,
+			objPlanVariableList,
+		},
+	}
+
+	for _, tt := range tests {
+		var got planVariableList
+		t.Run(tt.name, func(t *testing.T) {
+			if err := json.Unmarshal([]byte(tt.args), &got); err != nil {
+				t.Errorf("Failed to unmarshal json: %s", err)
+			}
+			sort.Slice(got, func(i, j int) bool {
+				cmpResult := strings.Compare(got[i].Key, got[j].Key)
+				return cmpResult == -1
+			})
+			sort.Slice(tt.want, func(i, j int) bool {
+				cmpResult := strings.Compare(tt.want[i].Key, tt.want[j].Key)
+				return cmpResult == -1
+			})
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf(
+					"TestPlanVariableList() -> \n\ngot:\n%v,\n\nwant:\n%v",
+					spew.Sdump(got),
+					spew.Sdump(tt.want),
+				)
+			}
+		})
+	}
+}
+
 func TestPlanStateResourceAttributeList(t *testing.T) {
 	jsonPlanStateResourceAttributeList := `{
 		"id": "terraform-state-locks",
