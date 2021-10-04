@@ -13,6 +13,7 @@ require (
 	github.com/go-test/deep v1.0.3
 	github.com/google/go-cmp v0.5.5
 	github.com/gorilla/mux v1.8.0
+	github.com/gusaul/go-dynamock v0.0.0-20210107061312-3e989056e1e6 // indirect
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-hclog v0.15.0
