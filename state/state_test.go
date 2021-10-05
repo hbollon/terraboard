@@ -68,7 +68,7 @@ func TestConfigure(t *testing.T) {
 		},
 		GCP: []config.GCPConfig{
 			{
-				HttpClient: hClient,
+				HTTPClient: hClient,
 				GCSBuckets: []string{
 					"test-bucket",
 				},

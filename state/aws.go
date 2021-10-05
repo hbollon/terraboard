@@ -194,7 +194,7 @@ func (a *AWS) GetState(st, versionID string) (sf *statefile.File, err error) {
 
 	sf, err = statefile.Read(result.Body)
 	if sf == nil || err != nil {
-		return sf, fmt.Errorf("Failed to find state: %v\n", err)
+		return sf, fmt.Errorf("Failed to find state: %v", err)
 	}
 
 	return

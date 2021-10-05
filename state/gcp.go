@@ -34,8 +34,8 @@ func NewGCP(gcp config.GCPConfig) (*GCP, error) {
 		return nil, nil
 	}
 
-	if gcp.HttpClient != nil {
-		client, err = storage.NewClient(ctx, option.WithHTTPClient(gcp.HttpClient))
+	if gcp.HTTPClient != nil {
+		client, err = storage.NewClient(ctx, option.WithHTTPClient(gcp.HTTPClient))
 	} else if gcp.GCPSAKey != "" {
 		log.WithFields(log.Fields{
 			"path": gcp.GCPSAKey,
