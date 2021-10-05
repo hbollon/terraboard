@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go v1.37.2
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-test/deep v1.0.3
-	github.com/google/go-cmp v0.5.5
+	github.com/google/go-cmp v0.5.6
 	github.com/gorilla/mux v1.8.0
 	github.com/gusaul/go-dynamock v0.0.0-20210107061312-3e989056e1e6 // indirect
 	github.com/hashicorp/errwrap v1.1.0
@@ -42,10 +42,10 @@ require (
 	github.com/zclconf/go-cty v1.9.0
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	golang.org/x/mod v0.4.2
-	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
+	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
 	golang.org/x/text v0.3.6 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
-	google.golang.org/api v0.44.0-impersonate-preview
+	google.golang.org/api v0.58.0
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/datatypes v1.0.1
 	gorm.io/driver/postgres v1.1.0
